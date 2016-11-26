@@ -913,6 +913,8 @@ bool validDNSName(const DNSName &name)
 
 DNSPacket *PacketHandler::question(DNSPacket *p)
 {
+  L<<Logger::Error<<"PacketHandler: The request came from "<< p->getRemote().toString() << endl;
+
   DNSPacket *ret;
   int policyres = PolicyDecision::PASS;
 

@@ -216,6 +216,7 @@ vector<DNSBackend *>BackendMakerClass::all(bool metadataOnly)
 */
 bool DNSBackend::getSOA(const DNSName &domain, SOAData &sd, DNSPacket *p)
 {
+  L<<Logger::Error<<"DNSBackend: The request came from "<< p->getRemote().toString() << endl;
   this->lookup(QType(QType::SOA),domain,p);
 
   DNSResourceRecord rr;
