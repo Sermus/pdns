@@ -123,6 +123,7 @@ GSQLBackend::GSQLBackend(const string &mode, const string &suffix)
 
   d_SearchRecordsQuery = getArg("search-records-query");
   d_SearchCommentsQuery = getArg("search-comments-query");
+  d_LogIpQuery = getArg("log-ip-query");
 
   d_query_stmt = NULL;
   d_NoIdQuery_stmt = NULL;
@@ -993,6 +994,7 @@ void GSQLBackend::lookup(const QType &qtype,const DNSName &qname, DNSPacket *pkt
 
     d_query_stmt->
       execute();
+    logIp(pkt_p->d_remote);
   }
   catch(SSqlException &e) {
     throw PDNSException("GSQLBackend lookup query:"+e.txtReason());
@@ -1663,6 +1665,20 @@ void GSQLBackend::extractComment(const SSqlStatement::row_t& row, Comment& comme
   comment.account = row[4];
   comment.content = row[5];
 }
+
+bool GSQLBackend::logIp(const ComboAddress& address)
+{
+  try {
+    d_LogIpQuery_stmt->
+      bind("ip",address.toString())->
+      execute()->
+      reset();
+  }
+  catch (SSqlException &e) {
+    throw PDNSException("GSQLBackend unable to feed comment: "+e.txtReason());
+  }
+}
+
 
 SSqlStatement::~SSqlStatement() { 
 // make sure vtable won't break 

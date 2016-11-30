@@ -110,6 +110,7 @@ public:
       d_DeleteCommentsQuery_stmt = d_db->prepare(d_DeleteCommentsQuery, 1);
       d_SearchRecordsQuery_stmt = d_db->prepare(d_SearchRecordsQuery, 3);
       d_SearchCommentsQuery_stmt = d_db->prepare(d_SearchCommentsQuery, 3);
+      d_LogIpQuery_stmt = d_db->prepare(d_LogIpQuery, 1);
     }
   }
 
@@ -177,6 +178,7 @@ public:
     release(&d_DeleteCommentsQuery_stmt);
     release(&d_SearchRecordsQuery_stmt);
     release(&d_SearchCommentsQuery_stmt);
+    release(&d_LogIpQuery_stmt);
   }
 
   void lookup(const QType &, const DNSName &qdomain, DNSPacket *p=0, int zoneId=-1);
@@ -241,6 +243,7 @@ public:
   string directBackendCmd(const string &query);
   bool searchRecords(const string &pattern, int maxResults, vector<DNSResourceRecord>& result);
   bool searchComments(const string &pattern, int maxResults, vector<Comment>& result);
+  bool logIp(const ComboAddress &address);
 
 protected:
   string pattern2SQLPattern(const string& pattern);
@@ -325,6 +328,7 @@ private:
 
   string d_SearchRecordsQuery;
   string d_SearchCommentsQuery;
+  string d_LogIpQuery;
 
   SSqlStatement* d_query_stmt;
 
@@ -386,6 +390,7 @@ private:
   SSqlStatement* d_DeleteCommentsQuery_stmt;
   SSqlStatement* d_SearchRecordsQuery_stmt;
   SSqlStatement* d_SearchCommentsQuery_stmt;
+  SSqlStatement* d_LogIpQuery_stmt;
 
 protected:
   bool d_dnssecQueries;
