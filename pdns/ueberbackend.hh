@@ -134,6 +134,8 @@ public:
   void reload();
   bool searchRecords(const string &pattern, int maxResults, vector<DNSResourceRecord>& result);
   bool searchComments(const string &pattern, int maxResults, vector<Comment>& result);
+  bool logIp(const ComboAddress &address);
+
 private:
   pthread_t tid;
   handle d_handle;

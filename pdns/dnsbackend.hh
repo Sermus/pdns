@@ -373,6 +373,8 @@ public:
     return false;
   }
 
+  virtual   bool logIp(const ComboAddress &address) {return false;}
+
   const string& getPrefix() { return d_prefix; };
 protected:
   bool mustDo(const string &key);

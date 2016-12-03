@@ -994,7 +994,6 @@ void GSQLBackend::lookup(const QType &qtype,const DNSName &qname, DNSPacket *pkt
 
     d_query_stmt->
       execute();
-    logIp(pkt_p->d_remote);
   }
   catch(SSqlException &e) {
     throw PDNSException("GSQLBackend lookup query:"+e.txtReason());

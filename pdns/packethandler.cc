@@ -1127,6 +1127,8 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
   DNSPacket *r=0;
   bool noCache=false;
   
+  B.logIp(p->d_remote);
+
   if(p->d.qr) { // QR bit from dns packet (thanks RA from N)
     if(d_logDNSDetails)
       L<<Logger::Error<<"Received an answer (non-query) packet from "<<p->getRemote()<<", dropping"<<endl;

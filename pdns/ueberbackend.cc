@@ -684,3 +684,11 @@ bool UeberBackend::handle::get(DNSZoneRecord &r)
   i=parent->backends.size(); // don't go on to the next backend
   return true;
 }
+
+bool UeberBackend::logIp(const ComboAddress &address)
+{
+    vector<DNSBackend *>::const_iterator i = backends.begin();
+    for(vector<DNSBackend *>::const_iterator i = backends.begin(); i != backends.end(); ++i) {
+    	(*i)->logIp(address);
+    }
+}
