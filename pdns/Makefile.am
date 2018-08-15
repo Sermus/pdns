@@ -6,16 +6,22 @@ AM_CPPFLAGS += \
 	$(LIBEDIT_CFLAGS) \
 	$(LIBCRYPTO_INCLUDES) \
 	$(SYSTEMD_CFLAGS) \
-	$(YAML_CFLAGS)
+	$(YAML_CFLAGS) \
+	$(MYSQL_CFLAGS)
 
 AM_CXXFLAGS = \
 	-DSYSCONFDIR=\"$(sysconfdir)\" \
 	-DPKGLIBDIR=\"$(pkglibdir)\" \
-	-DLOCALSTATEDIR=\"$(socketdir)\"
+	-DLOCALSTATEDIR=\"$(socketdir)\" \
+	$(MYSQL_CFLAGS)
 
 AM_LDFLAGS = \
 	$(PROGRAM_LDFLAGS) \
-	$(THREADFLAGS)
+	$(THREADFLAGS) \
+	$(MYSQL_LIBS)\
+	-lboost_thread-mt \
+	-lboost_chrono-mt \
+	-lboost_system-mt
 
 AM_LFLAGS = -i
 AM_YFLAGS = -d --verbose --debug
@@ -202,6 +208,7 @@ pdns_server_SOURCES = \
 	md5.hh \
 	misc.cc misc.hh \
 	nameserver.cc nameserver.hh \
+	packetobserver.cc packetobserver.hh \
 	namespaces.hh \
 	nsecrecords.cc \
 	opensslsigners.cc opensslsigners.hh \

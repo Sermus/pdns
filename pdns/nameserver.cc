@@ -40,6 +40,7 @@
 #include "logger.hh"
 #include "arguments.hh"
 #include "statbag.hh"
+#include "packetobserver.hh"
 
 #include "namespaces.hh"
 
@@ -284,6 +285,7 @@ void UDPNameserver::send(DNSPacket *p)
 {
   string buffer=p->getString();
   g_rs.submitResponse(*p, true);
+  po.observe(*p);
 
   struct msghdr msgh;
   struct iovec iov;
