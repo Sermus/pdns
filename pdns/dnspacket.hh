@@ -55,7 +55,7 @@ class DNSSECKeeper;
 class DNSPacket
 {
 public:
-  DNSPacket(bool isQuery);
+  DNSPacket(bool isQuery = false);
   DNSPacket(const DNSPacket &orig);
 
   int noparse(const char *mesg, size_t len); //!< just suck the data inward
