@@ -48,12 +48,28 @@ int getArgAsNum(const string &key)
   return arg().asNum("gmysql-"+key);
 }
 
+string PacketObserver::serialize_packet(DNSPacket &p)
+{
+    ostringstream ss;
+
+    ss << "('" << p.qdomain.toString() << "',";
+    ss << "'" << p.getRemote().toString() << "',";
+    ss << p.d.rcode << ",";
+
+    string replyString = p.getString();
+    replyString.erase(std::remove_if(replyString.begin(), replyString.end(), [](char c){return !isprint(c) || c=='(' || c==')' || c=='\"'|| c=='\'';}), replyString.end());
+    ss  << "'" << replyString << "')";
+
+    return ss.str();
+}
+
 void PacketObserver::save_observe_data()
 {
     SMySQL * sql = nullptr; 
     while(1)
     {
         DNSPacket p = observe_queue->pull_front();
+        uint32_t batch_counter = 1;
 
         if (!sql)
         {
@@ -67,19 +83,17 @@ void PacketObserver::save_observe_data()
         }
 
         ostringstream ss;
-        ss << "insert into querylog (qdomain,source_ip,rcode,answer) values(";
-        ss <<endl;
-        ss << "'" << p.qdomain.toString() << "',";
-        ss <<endl;
-        ss << "'" << p.getRemote().toString() << "',";
-        ss <<endl;
-        ss << p.d.rcode << ",";
-        ss <<endl;
+        ss << "insert into querylog (qdomain,source_ip,rcode,answer) values";
+        ss << serialize_packet(p) << ',';
 
-        string replyString = p.getString();
-        replyString.erase(std::remove_if(replyString.begin(), replyString.end(), [](char c){return !isprint(c) || c=='(' || c==')' || c=='\"'|| c=='\'';}), replyString.end());
-        ss  << "'" << replyString << "')";
+        while (batch_counter++ < BATCH_SIZE)
+        {
+            p = observe_queue->pull_front();
+            ss << serialize_packet(p) << ',';
+        }
+//        std::cout << batch_counter << std::endl;
         string query = ss.str();
+        query.pop_back();
         sql->execute(query);
     }
 }

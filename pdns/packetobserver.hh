@@ -10,6 +10,9 @@
 class PacketObserver
 {
     private:
+    static const uint32_t BATCH_SIZE = 1000;
+
+    private:
         boost::sync_bounded_queue<DNSPacket> *observe_queue;
         std::map<DNSName, uint32_t> *hitmap;
         boost::recursive_mutex guard;
@@ -25,6 +28,7 @@ class PacketObserver
     private:
         void save_observe_data();
         void save_hitmap_data();
+        string serialize_packet(DNSPacket &p);
 };
 
 extern PacketObserver po;
