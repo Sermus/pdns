@@ -1,16 +1,27 @@
 #include "packetobserver.hh"
-#include "modules/gmysqlbackend/smysql.hh"
 #include "arguments.hh"
 #include <iostream>
 #include <sstream>
 #include <algorithm>
+#include <boost/chrono.hpp>
+#include <boost/chrono/time_point.hpp>
+#include <boost/chrono/duration.hpp>
 
 PacketObserver po;
 
 using namespace std;
+using namespace boost::chrono;
 
 PacketObserver::PacketObserver()
 {
+    PARAM_PREFIX = "querylog";
+    declare("host", "Logging database host", "127.0.0.1");
+    declare("port", "Logging database instance port", "3306");
+    declare("socket", "Logging database socket", "");
+    declare("user", "Logging database name", "root");
+    declare("password", "Logging database name", "");
+    declare("dbname", "Logging database name", "pdnslogging");
+    declare("reconnectperiod", "Period between two reconnection attempts to logging database if the connection fails in seconds", "600");
     observe_queue = new boost::sync_bounded_queue<DNSPacket>(10000);
     hitmap_flush_thread = new boost::thread(&PacketObserver::save_observe_data, this);
     observe_flush_thread = new boost::thread(&PacketObserver::save_hitmap_data, this);
@@ -21,6 +32,22 @@ PacketObserver::~PacketObserver()
     delete hitmap_flush_thread;
     delete observe_flush_thread;
     delete observe_queue;
+}
+
+void PacketObserver::declare(const string &param, const string &help, const string &value)
+{
+  string fullname=PARAM_PREFIX+"-"+param;
+  arg().set(fullname,help)=value;
+}
+
+const string& PacketObserver::getArg(const string &key)
+{
+  return arg()[PARAM_PREFIX+"-"+key];
+}
+
+int PacketObserver::getArgAsNum(const string &key)
+{
+  return arg().asNum(PARAM_PREFIX+"-"+key);
 }
 
 void PacketObserver::observe(DNSPacket &p)
@@ -37,15 +64,16 @@ void PacketObserver::observe(DNSPacket &p)
     }
 }
 
-
-static const string& getArg(const string &key)
+SMySQL *PacketObserver::get_sql()
 {
-  return arg()["gmysql-"+key];
-}
-
-int getArgAsNum(const string &key)
-{
-  return arg().asNum("gmysql-"+key);
+    SMySQL * sql =  new SMySQL(getArg("dbname"),
+                getArg("host"),
+                getArgAsNum("port"),
+                getArg("socket"),
+                getArg("user"),
+                getArg("password"));
+                sql->setLog(::arg().mustDo("query-logging"));
+    return sql;
 }
 
 string PacketObserver::serialize_packet(DNSPacket &p)
@@ -66,56 +94,55 @@ string PacketObserver::serialize_packet(DNSPacket &p)
 void PacketObserver::save_observe_data()
 {
     SMySQL * sql = nullptr; 
+    system_clock::time_point last_connection_attempt_time = system_clock::from_time_t(0);
     while(1)
     {
         DNSPacket p = observe_queue->pull_front();
         uint32_t batch_counter = 1;
 
-        if (!sql)
+        try
         {
-            sql = new SMySQL(getArg("dbname"),
-                getArg("host"),
-                getArgAsNum("port"),
-                getArg("socket"),
-                getArg("user"),
-                getArg("password"));
-                sql->setLog(::arg().mustDo("query-logging"));
-        }
+            if (!sql)
+            {
+                if (boost::chrono::duration_cast<seconds>(system_clock::now() - last_connection_attempt_time).count() < getArgAsNum("reconnectperiod"))
+                {
+                    continue;
+                }
+                last_connection_attempt_time = system_clock::now();
+                sql = get_sql();
+                clog << "Connection to logging database is established" << endl;
+            }
 
-        ostringstream ss;
-        ss << "insert into querylog (qdomain,source_ip,rcode,answer) values";
-        ss << serialize_packet(p) << ',';
-
-        while (batch_counter++ < BATCH_SIZE)
-        {
-            p = observe_queue->pull_front();
+            ostringstream ss;
+            ss << "insert into querylog (qdomain,source_ip,rcode,answer) values";
             ss << serialize_packet(p) << ',';
+
+            while (batch_counter++ < BATCH_SIZE)
+            {
+                p = observe_queue->pull_front();
+                ss << serialize_packet(p) << ',';
+            }
+
+            string query = ss.str();
+            query.pop_back();
+            sql->execute(query);
         }
-//        std::cout << batch_counter << std::endl;
-        string query = ss.str();
-        query.pop_back();
-        sql->execute(query);
+        catch (SSqlException)
+        {
+            clog << "Connection to logging database is broken, restore in " << std::max(0ll, getArgAsNum("reconnectperiod") -  boost::chrono::duration_cast<seconds>(system_clock::now() - last_connection_attempt_time).count()) << " seconds"  << endl;
+            if (sql) delete sql;
+            sql = nullptr;
+        }
     }
 }
 
 void PacketObserver::save_hitmap_data()
 {
     SMySQL * sql = nullptr; 
+    system_clock::time_point last_connection_attempt_time = system_clock::from_time_t(0);
     while(1)
     {
         boost::this_thread::sleep_for(boost::chrono::seconds{5});
-
-        if (!sql)
-        {
-            sql = new SMySQL(getArg("dbname"),
-                getArg("host"),
-                getArgAsNum("port"),
-                getArg("socket"),
-                getArg("user"),
-                getArg("password"));
-                sql->setLog(::arg().mustDo("query-logging"));
-        }
-
         std::map<DNSName, uint32_t> * map;
         {
             boost::lock_guard<boost::recursive_mutex> lock(guard);
@@ -124,17 +151,39 @@ void PacketObserver::save_hitmap_data()
             if (!map)
                 continue;
         }
-        sql->startTransaction();
-        for (auto const &x : *map)
+        try
         {
-            ostringstream ss;
-            ss << "insert into hitcountlog (qdomain,hitcount) values(";
-            ss << "'" << x.first.toString() << "'," << x.second << ")";
-            ss << " ON DUPLICATE KEY UPDATE hitcount = hitcount + VALUES(hitcount)";
-            string query = ss.str();
-            sql->execute(query);
+            if (!sql)
+            {
+                if (boost::chrono::duration_cast<seconds>(system_clock::now() - last_connection_attempt_time).count() < getArgAsNum("reconnectperiod"))
+                {
+                    delete map;
+                    continue;
+                }
+                sql = get_sql();
+                last_connection_attempt_time = system_clock::now();
+                clog << "Connection to logging database is established" << endl;
+            }
+
+            sql->startTransaction();
+            for (auto const &x : *map)
+            {
+                ostringstream ss;
+                ss << "insert into hitcountlog (qdomain,hitcount) values(";
+                ss << "'" << x.first.toString() << "'," << x.second << ")";
+                ss << " ON DUPLICATE KEY UPDATE hitcount = hitcount + VALUES(hitcount)";
+                string query = ss.str();
+                sql->execute(query);
+            }
+            sql->commit();
+            delete map;
         }
-        sql->commit();
-        delete map;
+        catch (SSqlException)
+        {
+            clog << "Connection to logging database is broken, restore in " << std::max(0ll, getArgAsNum("reconnectperiod") -  boost::chrono::duration_cast<seconds>(system_clock::now() - last_connection_attempt_time).count()) << " seconds"  << endl;
+            delete map;
+            if (sql) delete sql;
+            sql = nullptr;
+        }    
     }
 }
