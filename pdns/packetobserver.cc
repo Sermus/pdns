@@ -129,7 +129,7 @@ void PacketObserver::save_observe_data()
         }
         catch (SSqlException)
         {
-            clog << "Connection to logging database is broken, restore in " << std::max(0ll, getArgAsNum("reconnectperiod") -  boost::chrono::duration_cast<seconds>(system_clock::now() - last_connection_attempt_time).count()) << " seconds"  << endl;
+            clog << "Connection to logging database is broken, restore in " << std::max(0ll, static_cast<long long int>(getArgAsNum("reconnectperiod") -  boost::chrono::duration_cast<seconds>(system_clock::now() - last_connection_attempt_time).count())) << " seconds"  << endl;
             if (sql) delete sql;
             sql = nullptr;
         }
@@ -180,7 +180,7 @@ void PacketObserver::save_hitmap_data()
         }
         catch (SSqlException)
         {
-            clog << "Connection to logging database is broken, restore in " << std::max(0ll, getArgAsNum("reconnectperiod") -  boost::chrono::duration_cast<seconds>(system_clock::now() - last_connection_attempt_time).count()) << " seconds"  << endl;
+            clog << "Connection to logging database is broken, restore in " << std::max(0ll, static_cast<long long int>(getArgAsNum("reconnectperiod") -  boost::chrono::duration_cast<seconds>(system_clock::now() - last_connection_attempt_time).count())) << " seconds"  << endl;
             delete map;
             if (sql) delete sql;
             sql = nullptr;
