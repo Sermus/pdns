@@ -19,9 +19,9 @@ AM_LDFLAGS = \
 	$(PROGRAM_LDFLAGS) \
 	$(THREADFLAGS) \
 	$(MYSQL_LIBS)\
-	-lboost_thread-mt \
-	-lboost_chrono-mt \
-	-lboost_system-mt
+	-lboost_thread \
+	-lboost_chrono \
+	-lboost_system
 
 AM_LFLAGS = -i
 AM_YFLAGS = -d --verbose --debug
