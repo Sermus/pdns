@@ -29,6 +29,7 @@
 #include <sys/resource.h>
 #include "dynhandler.hh"
 #include "dnsseckeeper.hh"
+#include "packetobserver.hh"
 
 #ifdef HAVE_SYSTEMD
 #include <systemd/sd-daemon.h>
@@ -581,6 +582,7 @@ void mainthread()
     TN->go(); // tcp nameserver launch
 
   //  fork(); (this worked :-))
+  po.init();
   unsigned int max_rthreads= ::arg().asNum("receiver-threads", 1);
   g_distributors.resize(max_rthreads);
   for(unsigned int n=0; n < max_rthreads; ++n)
@@ -604,6 +606,6 @@ void mainthread()
     }
     catch(...){}
   }
-  
+  po.deinit();
   g_log<<Logger::Error<<"Mainthread exiting - should never happen"<<endl;
 }

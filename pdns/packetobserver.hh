@@ -13,6 +13,7 @@ class PacketObserver
     private:
         static const uint32_t BATCH_SIZE = 1000;
         string PARAM_PREFIX;
+        bool finish_threads;
 
     private:
         boost::sync_bounded_queue<DNSPacket> *observe_queue;
@@ -24,6 +25,8 @@ class PacketObserver
     public:
         PacketObserver();
         ~PacketObserver();
+        void init();
+        void deinit();
         void set_queue_size(size_t size);
         void observe(DNSPacket &p);
 

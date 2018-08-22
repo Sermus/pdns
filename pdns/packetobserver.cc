@@ -22,13 +22,25 @@ PacketObserver::PacketObserver()
     declare("password", "Logging database name", "");
     declare("dbname", "Logging database name", "pdnslogging");
     declare("reconnectperiod", "Period between two reconnection attempts to logging database if the connection fails in seconds", "600");
-    observe_queue = new boost::sync_bounded_queue<DNSPacket>(10000);
-    hitmap_flush_thread = new boost::thread(&PacketObserver::save_observe_data, this);
-    observe_flush_thread = new boost::thread(&PacketObserver::save_hitmap_data, this);
 }
 
 PacketObserver::~PacketObserver()
 {
+}
+
+void PacketObserver::init()
+{
+    observe_queue = new boost::sync_bounded_queue<DNSPacket>(10000);
+    finish_threads = false;
+    hitmap_flush_thread = new boost::thread(&PacketObserver::save_observe_data, this);
+    observe_flush_thread = new boost::thread(&PacketObserver::save_hitmap_data, this);
+}
+
+void PacketObserver::deinit()
+{
+    finish_threads = true;
+    hitmap_flush_thread->join();
+    observe_flush_thread->join();
     delete hitmap_flush_thread;
     delete observe_flush_thread;
     delete observe_queue;
@@ -95,7 +107,7 @@ void PacketObserver::save_observe_data()
 {
     SMySQL * sql = nullptr; 
     system_clock::time_point last_connection_attempt_time = system_clock::from_time_t(0);
-    while(1)
+    while(!finish_threads)
     {
         DNSPacket p = observe_queue->pull_front();
         uint32_t batch_counter = 1;
@@ -140,7 +152,7 @@ void PacketObserver::save_hitmap_data()
 {
     SMySQL * sql = nullptr; 
     system_clock::time_point last_connection_attempt_time = system_clock::from_time_t(0);
-    while(1)
+    while(!finish_threads)
     {
         boost::this_thread::sleep_for(boost::chrono::seconds{5});
         std::map<DNSName, uint32_t> * map;
