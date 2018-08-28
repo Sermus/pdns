@@ -39,6 +39,7 @@ DELIMITER //
 CREATE PROCEDURE archive_querylog()
  BEGIN
  insert into querylog_refs (name) values(CONCAT('querylog_', REPLACE(CURRENT_TIMESTAMP, ' ','_')));
+ drop table if exists `querylog_temp`;
  create table querylog_temp like querylog;
  select concat('rename table querylog to `', name, '`, querylog_temp to querylog;') from querylog_refs order by id desc limit 1 into @statement;
  PREPARE queryexec FROM @statement;
@@ -69,6 +70,7 @@ DELIMITER //
 CREATE PROCEDURE archive_hitcountlog()
  BEGIN
  insert into hitcountlog_refs (name) values(CONCAT('hitcountlog_', REPLACE(CURRENT_TIMESTAMP, ' ','_')));
+ drop table if exists `hitcountlog_temp`;
  create table hitcountlog_temp like hitcountlog;
  select concat('rename table hitcountlog to `', name, '`, hitcountlog_temp to hitcountlog;') from hitcountlog_refs order by id desc limit 1 into @statement;
  PREPARE queryexec FROM @statement;
