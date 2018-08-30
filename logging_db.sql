@@ -52,6 +52,7 @@ create event archive_querylog on schedule every 1 day starts CURRENT_TIMESTAMP d
 DELIMITER //
 CREATE PROCEDURE drop_querylog_archives(in ts timestamp)
 BEGIN
+  SET SESSION group_concat_max_len = 1000000;
   IF EXISTS (select * from querylog_refs where timestamp < ts) THEN
     select concat('drop table ', GROUP_CONCAT(concat('`',name,'`')) , ';') from querylog_refs where timestamp < ts INTO @statement;
     PREPARE queryexec FROM @statement;
@@ -83,6 +84,7 @@ create event archive_hitcountlog on schedule every 1 day starts CURRENT_TIMESTAM
 DELIMITER //
 CREATE PROCEDURE drop_hitcountlog_archives(in ts timestamp)
 BEGIN
+  SET SESSION group_concat_max_len = 1000000;
   IF EXISTS (select * from hitcountlog_refs where timestamp < ts) THEN
     select concat('drop table ', GROUP_CONCAT(concat('`',name,'`')) , ';') from hitcountlog_refs where timestamp < ts INTO @statement;
     PREPARE queryexec FROM @statement;
@@ -92,7 +94,7 @@ BEGIN
 END //
 DELIMITER ;
 
-create event drop_hitcountlog_archives on schedule every 1 day starts CURRENT_TIMESTAMP do call drop_querylog_archives(DATE_SUB(NOW(), INTERVAL 1 DAY));
+create event drop_hitcountlog_archives on schedule every 1 day starts CURRENT_TIMESTAMP do call drop_hitcountlog_archives(DATE_SUB(NOW(), INTERVAL 1 DAY));
 
 
 DELIMITER //
