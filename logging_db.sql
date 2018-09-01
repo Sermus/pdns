@@ -16,6 +16,7 @@ CREATE TABLE `hitcountlog_refs` (
 CREATE TABLE `querylog` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `response_time` int DEFAULT 0,
   `qdomain` varchar(255) DEFAULT NULL,
   `source_ip` varchar(255) DEFAULT NULL,
   `rcode` smallint(6) NOT NULL,
@@ -85,6 +86,7 @@ DELIMITER //
 CREATE PROCEDURE drop_hitcountlog_archives(in ts timestamp)
 BEGIN
   SET SESSION group_concat_max_len = 1000000;
+  DECLARE CONTINUE HANDLER FOR 1051 SET E='1051';
   IF EXISTS (select * from hitcountlog_refs where timestamp < ts) THEN
     select concat('drop table ', GROUP_CONCAT(concat('`',name,'`')) , ';') from hitcountlog_refs where timestamp < ts INTO @statement;
     PREPARE queryexec FROM @statement;

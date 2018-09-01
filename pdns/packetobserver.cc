@@ -92,7 +92,9 @@ string PacketObserver::serialize_packet(DNSPacket &p)
 {
     ostringstream ss;
 
-    ss << "('" << p.qdomain.toString() << "',";
+    ss << "(FROM_UNIXTIME(" << p.d_dt.time() << "),";
+    ss << "" << p.d_dt.udiff() << ",";
+    ss << "'" << p.qdomain.toString() << "',";
     ss << "'" << p.getRemote().toString() << "',";
     ss << p.d.rcode << ",";
 
@@ -126,7 +128,7 @@ void PacketObserver::save_observe_data()
             }
 
             ostringstream ss;
-            ss << "insert into querylog (qdomain,source_ip,rcode,answer) values";
+            ss << "insert into querylog (timestamp,response_time,qdomain,source_ip,rcode,answer) values";
             ss << serialize_packet(p) << ',';
 
             while (batch_counter++ < BATCH_SIZE)
