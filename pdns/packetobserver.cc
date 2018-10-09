@@ -1,5 +1,6 @@
 #include "packetobserver.hh"
 #include "arguments.hh"
+#include "logger.hh"
 #include <iostream>
 #include <sstream>
 #include <algorithm>
@@ -124,7 +125,7 @@ void PacketObserver::save_observe_data()
                 }
                 last_connection_attempt_time = system_clock::now();
                 sql = get_sql();
-                clog << "Connection to logging database is established" << endl;
+                g_log<<Logger::Info<< << "Connection to logging database is established" << endl;
             }
 
             ostringstream ss;
@@ -143,7 +144,7 @@ void PacketObserver::save_observe_data()
         }
         catch (SSqlException)
         {
-            clog << "Connection to logging database is broken, restore in " << std::max(0ll, static_cast<long long int>(getArgAsNum("reconnectperiod") -  boost::chrono::duration_cast<seconds>(system_clock::now() - last_connection_attempt_time).count())) << " seconds"  << endl;
+            g_log<<Logger::Error << "Connection to logging database is broken for querylog, restore in " << std::max(0ll, static_cast<long long int>(getArgAsNum("reconnectperiod") -  boost::chrono::duration_cast<seconds>(system_clock::now() - last_connection_attempt_time).count())) << " seconds"  << endl;
             if (sql) delete sql;
             sql = nullptr;
         }
@@ -176,7 +177,7 @@ void PacketObserver::save_hitmap_data()
                 }
                 sql = get_sql();
                 last_connection_attempt_time = system_clock::now();
-                clog << "Connection to logging database is established" << endl;
+                g_log<<Logger::Info<< << "Connection to logging database is established" << endl;
             }
 
             sql->startTransaction();
@@ -194,7 +195,7 @@ void PacketObserver::save_hitmap_data()
         }
         catch (SSqlException)
         {
-            clog << "Connection to logging database is broken, restore in " << std::max(0ll, static_cast<long long int>(getArgAsNum("reconnectperiod") -  boost::chrono::duration_cast<seconds>(system_clock::now() - last_connection_attempt_time).count())) << " seconds"  << endl;
+            g_log<<Logger::Error << "Connection to logging database is broken for hitcount, restore in " << std::max(0ll, static_cast<long long int>(getArgAsNum("reconnectperiod") -  boost::chrono::duration_cast<seconds>(system_clock::now() - last_connection_attempt_time).count())) << " seconds"  << endl;
             delete map;
             if (sql) delete sql;
             sql = nullptr;
